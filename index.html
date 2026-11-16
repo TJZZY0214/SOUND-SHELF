@@ -119,7 +119,7 @@ img{max-width:100%;display:block} a{color:inherit} button,input,select,textarea{
 .stat b{display:block;font:500 3.2rem/1 var(--serif)}.stat span{font-size:.75rem;letter-spacing:.2em;color:var(--mist)}
 .bar{display:grid;grid-template-columns:90px 1fr 2rem;gap:var(--s2);align-items:center;margin:.6rem 0;font-size:.85rem}
 .bar i{display:block;height:8px;background:var(--line);border-radius:99px;overflow:hidden}.bar i b{display:block;height:100%;background:var(--ink);border-radius:99px;transition:width .8s var(--ease)}
-.bar.top i b{background:var(--accent)}
+.bar.is-top i b{background:var(--accent)}
 
 /* Empty / footer / toast */
 .empty{text-align:center;padding:var(--s5) var(--s3)}.empty.small{padding:var(--s4) var(--s2);border:1px dashed var(--line)}
@@ -149,6 +149,18 @@ dialog::backdrop{background:rgba(15,15,14,.55);backdrop-filter:blur(3px)}
 .player iframe{width:100%;border:0;border-radius:2px;background:var(--line)}
 .player .yt{aspect-ratio:16/9;height:auto}.player .sp{height:152px}
 .badge.play{color:var(--ink);border-color:var(--ink)}
+
+/* Review（年度回顧 V2.0）：只使用既有變數與元件 */
+.review-controls{display:flex;justify-content:center;margin-bottom:var(--s3)}
+.review-controls .field{display:flex;align-items:center;gap:var(--s1)}.review-controls select{width:auto}
+.review-lead{text-align:center;padding:var(--s4) var(--s3);margin-bottom:var(--s3)}
+.review-lead h3{font:500 clamp(1.8rem,5vw,2.8rem)/1.2 var(--serif);margin:.4rem 0 var(--s2);letter-spacing:.04em}
+.review-lead p{margin:.2rem 0;color:var(--mist)}
+#view-review .two-col{margin-bottom:var(--s3)}
+#view-review .bar{grid-template-columns:120px 1fr 2rem}
+#view-review .bar span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.review-gap{margin-top:var(--s4)}.review-share{display:grid;gap:var(--s2)}
+@media(max-width:560px){#view-review .bar{grid-template-columns:90px 1fr 1.6rem}}
 </style>
   <script>/* 預載主題，避免閃白（唯一允許直接讀 localStorage 的地方） */
     try{var s=JSON.parse(localStorage.getItem("soundshelf.state")||"{}");if(s.settings&&s.settings.theme==="dark")document.documentElement.dataset.theme="dark";}catch(e){}
@@ -164,6 +176,7 @@ dialog::backdrop{background:rgba(15,15,14,.55);backdrop-filter:blur(3px)}
       <a href="#diary" data-nav="diary">聆聽日記<small>Diary</small></a>
       <a href="#memory" data-nav="memory">回憶卡<small>Memory</small></a>
       <a href="#stats" data-nav="stats">統計<small>Stats</small></a>
+      <a href="#review" data-nav="review">年度回顧<small>Review</small></a>
     </nav>
     <button class="icon-btn" id="btn-theme" type="button" aria-label="切換深色／淺色模式" aria-pressed="false">◐</button>
   </header>
@@ -259,6 +272,41 @@ dialog::backdrop{background:rgba(15,15,14,.55);backdrop-filter:blur(3px)}
         <div class="panel"><h3 class="sec-title">各心情的歌曲數 <small>收藏牆全部歌曲</small></h3><div id="stat-mood"></div></div>
       </div>
     </section>
+    <!-- 年度回顧（V2.0） -->
+    <section class="view" id="view-review" data-view="review" aria-label="我的音樂年度回顧" hidden>
+      <header class="view-head"><p class="eyebrow">My Music Year in Review</p><h2>我的音樂年度回顧</h2><p class="sub">用你的收藏與日記，整理這一年的音樂口味。</p></header>
+      <div class="review-controls"><label class="field">年份<select id="review-year"></select></label></div>
+      <div id="review-empty" class="empty" hidden></div>
+      <div id="review-body" hidden>
+        <div class="panel review-lead">
+          <p class="eyebrow">Your year in music</p>
+          <h3 id="review-headline"></h3>
+          <div id="review-summary"></div>
+        </div>
+        <div class="stat-row" id="review-stats"></div>
+        <div class="two-col">
+          <div class="panel"><h3 class="sec-title">收藏的音樂類型 <small>目前的我的最愛</small></h3><div id="review-genre"></div></div>
+          <div class="panel"><h3 class="sec-title">最常收藏的歌手 <small>前 5 名</small></h3><div id="review-artists"></div></div>
+        </div>
+        <div class="two-col">
+          <div class="panel"><h3 class="sec-title">最愛歌曲的心情 <small>依歌曲的心情標籤</small></h3><div id="review-mood-fav"></div></div>
+          <div class="panel"><h3 class="sec-title">日記裡的心情 <small id="review-mood-year"></small></h3><div id="review-mood-diary"></div></div>
+        </div>
+        <h3 class="sec-title">這一年的日記 <span id="review-diary-count"></span></h3>
+        <div id="review-diary" class="diary-list"></div>
+        <div id="review-diary-empty" class="empty small" hidden></div>
+        <h3 class="sec-title review-gap">下載年度回顧圖片</h3>
+        <div class="two-col">
+          <div class="panel review-share">
+            <label class="field">卡片色調<select id="review-theme"><option value="light">奶油白</option><option value="dark">炭黑</option></select></label>
+            <button class="btn" type="button" id="btn-review-download">下載年度回顧 PNG</button>
+            <p class="note">這張圖與本頁只使用你收藏的「最愛」與寫下的「聆聽日記」。本站不記錄播放，因此不會有播放次數或聆聽分鐘數。最愛清單沒有日期，所以類型、歌手與最愛心情是目前的全部最愛；日記則依所選年份計算。</p>
+          </div>
+          <div class="preview"><canvas id="review-canvas" width="1080" height="1350" aria-label="年度回顧圖片預覽"></canvas></div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <footer class="footer">
@@ -521,6 +569,67 @@ window.SoundShelfMemory = (function () {
     return { coverFallback: !img };
   }
 
+  /**
+   * 年度回顧圖片（1080×1350）。d: { year, headline, theme, genreRows, artistRows, moodRows, favCount, diaryCount, diaryDays, covers[] }
+   * 只畫收藏與日記的統計，不含任何播放次數或時間。回傳 { coverFallback }
+   */
+  async function drawReview(canvas, d) {
+    try { await document.fonts.ready; } catch (e) { /* 忽略 */ }
+    const t = THEMES[d.theme] || THEMES.light;
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = t.bg; ctx.fillRect(0, 0, W, H);
+    ctx.textBaseline = "alphabetic";
+    const fit = (text, max) => { let s = String(text); while (ctx.measureText(s).width > max && s.length > 1) s = s.slice(0, -1); return s === String(text) ? s : s + "…"; };
+    const centerSpaced = (text, cx, y, space) => {
+      const total = [...text].reduce((a, ch) => a + ctx.measureText(ch).width + space, -space);
+      ctx.textAlign = "left"; letterSpaced(ctx, text, cx - total / 2, y, space);
+    };
+    // 標題區
+    ctx.fillStyle = t.mist; ctx.font = `500 22px ${SANS}`; centerSpaced("SOUND SHELF", W / 2, 80, 8);
+    ctx.font = `500 20px ${SANS}`; centerSpaced("MY MUSIC YEAR IN REVIEW", W / 2, 150, 6);
+    ctx.fillStyle = t.ink; ctx.textAlign = "center"; ctx.font = `500 190px ${SERIF}`; ctx.fillText(d.year, W / 2, 330);
+    ctx.font = `300 38px ${SANS}`; ctx.fillText(fit(d.headline, 880), W / 2, 400);
+    // 封面（最多 4 張）
+    const imgs = await Promise.all(d.covers.map(loadImage)), size = 200, gap = 24;
+    const startX = (W - (imgs.length * size + (imgs.length - 1) * gap)) / 2;
+    imgs.forEach((img, i) => {
+      const x = startX + i * (size + gap);
+      if (img) ctx.drawImage(img, x, 450, size, size);
+      else { ctx.fillStyle = t.line; ctx.fillRect(x, 450, size, size); ctx.fillStyle = t.mist; ctx.beginPath(); ctx.arc(x + size / 2, 550, 40, 0, Math.PI * 2); ctx.fill(); }
+      ctx.strokeStyle = t.line; ctx.lineWidth = 2; ctx.strokeRect(x - 1, 449, size + 2, size + 2);
+    });
+    ctx.fillStyle = t.line; ctx.fillRect(120, 700, 840, 2);
+    // 兩欄：類型與歌手
+    const column = (title, rows, x) => {
+      ctx.textAlign = "left"; ctx.fillStyle = t.mist; ctx.font = `500 20px ${SANS}`; letterSpaced(ctx, title, x, 760, 5);
+      const max = Math.max(1, ...rows.map((r) => r[1]));
+      rows.forEach(([label, n], i) => {
+        const y = 815 + i * 62;
+        ctx.textAlign = "left"; ctx.fillStyle = t.ink; ctx.font = `300 30px ${SANS}`; ctx.fillText(fit(label, 270), x, y);
+        ctx.textAlign = "right"; ctx.fillStyle = t.mist; ctx.fillText(`${n} 首`, x + 380, y);
+        ctx.fillStyle = t.line; ctx.fillRect(x, y + 14, 380, 4); ctx.fillStyle = t.ink; ctx.fillRect(x, y + 14, 380 * (n / max), 4);
+      });
+      if (!rows.length) { ctx.textAlign = "left"; ctx.fillStyle = t.mist; ctx.font = `300 28px ${SANS}`; ctx.fillText("—", x, 815); }
+    };
+    column("TOP GENRES", d.genreRows, 120); column("TOP ARTISTS", d.artistRows, 580);
+    // 心情長條圖
+    ctx.textAlign = "left"; ctx.fillStyle = t.mist; ctx.font = `500 20px ${SANS}`; letterSpaced(ctx, "MOODS OF MY FAVORITES", 120, 1010, 5);
+    const maxM = Math.max(1, ...d.moodRows.map((r) => r[1])), base = 1190;
+    d.moodRows.forEach(([label, n], i) => {
+      const x = 120 + i * 180, h = n ? Math.max(6, (n / maxM) * 120) : 3;
+      ctx.fillStyle = n ? t.ink : t.line; ctx.fillRect(x, base - h, 120, h);
+      ctx.textAlign = "center"; ctx.fillStyle = t.ink; ctx.font = `500 26px ${SANS}`; ctx.fillText(String(n), x + 60, base - h - 12);
+      ctx.fillStyle = t.mist; ctx.font = `300 22px ${SANS}`; ctx.fillText(label, x + 60, base + 34);
+    });
+    // 頁尾
+    ctx.fillStyle = t.line; ctx.fillRect(120, 1250, 840, 2);
+    ctx.textAlign = "center"; ctx.fillStyle = t.ink; ctx.font = `300 26px ${SANS}`;
+    ctx.fillText(`${d.favCount} 首最愛 · ${d.year} 年 ${d.diaryCount} 篇日記（${d.diaryDays} 天）`, W / 2, 1295);
+    ctx.fillStyle = t.mist; ctx.font = `300 18px ${SANS}`; ctx.fillText("僅統計收藏與日記，不含播放次數與聆聽時間", W / 2, 1328);
+    return { coverFallback: imgs.some((i) => !i) };
+  }
+
   /** 下載 PNG；失敗回傳 false */
   function download(canvas, filename) {
     return new Promise((resolve) => {
@@ -535,7 +644,7 @@ window.SoundShelfMemory = (function () {
       } catch (e) { resolve(false); }
     });
   }
-  return { draw, download, WIDTH: W, HEIGHT: H };
+  return { draw, drawReview, download, WIDTH: W, HEIGHT: H };
 })();
 </script>
 
@@ -549,7 +658,7 @@ window.SoundShelfMemory = (function () {
   "use strict";
   const { GENRES, MOODS, DEFAULT_SONGS, DEFAULT_COVER } = window.SoundShelfData;
   const Storage = window.SoundShelfStorage, Memory = window.SoundShelfMemory;
-  const VIEWS = ["shelf", "mood", "diary", "memory", "stats"];
+  const VIEWS = ["shelf", "mood", "diary", "memory", "stats", "review"];
 
   /* ---------- Helpers ---------- */
   const $ = (s) => document.querySelector(s);
@@ -587,7 +696,7 @@ window.SoundShelfMemory = (function () {
   /* ---------- State ---------- */
   const loaded = Storage.load();
   const data = loaded.state;                 // 會被持久化的使用者資料
-  const ui = { genre: "全部", query: "", onlyFav: false, mood: MOODS[0].value, currentId: null };
+  const ui = { genre: "全部", query: "", onlyFav: false, mood: MOODS[0].value, currentId: null, reviewYear: String(new Date().getFullYear()) };
   function persist() { if (!Storage.save(data)) toast("無法儲存資料（瀏覽器的儲存空間可能已滿或被禁用）"); }
 
   /* ---------- Songs ---------- */
@@ -664,28 +773,30 @@ window.SoundShelfMemory = (function () {
     renderSongs(box, list); empty.hidden = list.length > 0; box.hidden = list.length === 0;
     if (!list.length) emptyBox(empty, "Quiet here", `「${moodLabel(ui.mood)}」心情還沒有歌曲。`, "新增一首", openAdd);
   }
+  /** 日記項目（日記頁與年度回顧共用；withTools=false 時不顯示操作按鈕） */
+  function buildDiaryItem(d, withTools) {
+    const song = songById(d.songId);
+    return el("article", { class: "diary-item" },
+      el("div", { class: "cover" }, coverImg(d.cover || DEFAULT_COVER, "歌曲封面")),
+      el("div", {},
+        el("h4", { text: d.songTitle || (song && song.title) || "（已刪除的歌曲）" }),
+        el("p", { class: "meta", text: `${d.songArtist || (song && song.artist) || ""} · ${d.date} · ${moodText(d.mood)}` }),
+        el("p", { text: d.text }),
+        withTools ? el("div", { class: "tools" },
+          song ? el("button", { class: "link-btn", type: "button", text: "做成回憶卡", onclick: () => goMemory(song.id, d) }) : null,
+          el("button", { class: "link-btn danger", type: "button", text: "刪除", onclick: () => deleteDiary(d.id) })) : null));
+  }
   function renderDiary() {
     const box = $("#diary-list"), empty = $("#diary-empty");
     const items = [...data.diary].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
     $("#diary-count").textContent = items.length ? `（${items.length}）` : "";
-    box.replaceChildren(...items.map((d) => {
-      const song = songById(d.songId);
-      return el("article", { class: "diary-item" },
-        el("div", { class: "cover" }, coverImg(d.cover || DEFAULT_COVER, "歌曲封面")),
-        el("div", {},
-          el("h4", { text: d.songTitle || (song && song.title) || "（已刪除的歌曲）" }),
-          el("p", { class: "meta", text: `${d.songArtist || (song && song.artist) || ""} · ${d.date} · ${moodText(d.mood)}` }),
-          el("p", { text: d.text }),
-          el("div", { class: "tools" },
-            song ? el("button", { class: "link-btn", type: "button", text: "做成回憶卡", onclick: () => goMemory(song.id, d) }) : null,
-            el("button", { class: "link-btn danger", type: "button", text: "刪除", onclick: () => deleteDiary(d.id) }))));
-    }));
+    box.replaceChildren(...items.map((d) => buildDiaryItem(d, true)));
     empty.hidden = items.length > 0;
     if (!items.length) emptyBox(empty, "Blank page", "還沒有聆聽日記。選一首歌，寫下今天的感受吧。");
   }
   function bars(box, rows, topValue) {
     const max = Math.max(1, ...rows.map((r) => r[1]));
-    box.replaceChildren(...rows.map(([label, n]) => el("div", { class: "bar" + (n === topValue && n > 0 ? " top" : "") },
+    box.replaceChildren(...rows.map(([label, n]) => el("div", { class: "bar" + (n === topValue && n > 0 ? " is-top" : "") },
       el("span", { text: label }), el("i", {}, el("b", { style: `width:${(n / max) * 100}%` })), el("span", { text: String(n) }))));
   }
   function renderStats() {
@@ -836,10 +947,93 @@ window.SoundShelfMemory = (function () {
     toast(ok ? "已下載回憶卡" : "下載失敗，請改用右鍵另存圖片");
   }
 
+  /* ---------- Review 年度回顧（V2.0，AGENTS.md §2 #13）---------- */
+  const MIN_FAVS = 3;   // 至少需要幾首「最愛」才產生回顧
+  const statBox = (n, label) => el("div", { class: "stat" }, el("b", { text: String(n) }), el("span", { text: label }));
+  const topOf = (rows) => { const max = Math.max(0, ...rows.map((r) => r[1])); return max > 0 ? rows.filter((r) => r[1] === max).map((r) => r[0]) : []; };
+  function reviewYears() {
+    const ys = new Set([String(new Date().getFullYear())]);
+    data.diary.forEach((d) => ys.add(d.date.slice(0, 4)));
+    return [...ys].sort().reverse();
+  }
+  /** 只用 favorites 與 diary 計算；不含、也不虛構任何播放次數或聆聽時間 */
+  function computeReview(year) {
+    const favs = favSet(), favSongs = allSongs().filter((s) => favs.has(s.id));
+    const diary = data.diary.filter((d) => d.date.startsWith(year + "-"));
+    const countBy = (arr, fn, keys) => keys.map((k) => [k, arr.filter((x) => fn(x) === k).length]);
+    const moodKeys = MOODS.map((m) => m.value);
+    const genreRows = countBy(favSongs, (s) => s.genre, GENRES);
+    const moodFavRows = countBy(favSongs, (s) => s.mood, moodKeys);
+    const moodDiaryRows = countBy(diary, (d) => d.mood, moodKeys);
+    const artistMap = new Map(); favSongs.forEach((s) => artistMap.set(s.artist, (artistMap.get(s.artist) || 0) + 1));
+    const artistRows = [...artistMap.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    return { year, favSongs, diary, genreRows, moodFavRows, moodDiaryRows, artistRows,
+      diaryDays: new Set(diary.map((d) => d.date)).size, genreCount: genreRows.filter((r) => r[1] > 0).length,
+      topGenres: topOf(genreRows), topMoods: topOf(moodFavRows), topDiaryMoods: topOf(moodDiaryRows),
+      topArtists: artistRows.length ? artistRows.filter((r) => r[1] === artistRows[0][1]).map((r) => r[0]) : [] };
+  }
+  /** 由統計結果產生標題與摘要句（樣板文字，不含任何虛構數據） */
+  function reviewTexts(r) {
+    const n = (rows, names) => (rows.find((x) => x[0] === names[0]) || [0, 0])[1];
+    const headline = r.topMoods.length === 1 ? `「${moodLabel(r.topMoods[0])}」是你這一年的主旋律` : "你的音樂心情很多元";
+    const lines = [];
+    const tie = (arr) => (arr.length > 1 ? "（並列）" : "");
+    lines.push(`你的最愛有 ${r.favSongs.length} 首，最常收藏的類型是 ${r.topGenres.join("、")}${tie(r.topGenres)}，共 ${n(r.genreRows, r.topGenres)} 首。`);
+    const topArtistCount = r.artistRows.length ? r.artistRows[0][1] : 0;
+    lines.push(topArtistCount > 1 ? `最常收藏的歌手是 ${r.topArtists.join("、")}${tie(r.topArtists)}，${r.topArtists.length > 1 ? "各" : "共"} ${topArtistCount} 首。` : "你收藏的歌手各只有 1 首，目前沒有特別偏愛的歌手。");
+    lines.push(r.diary.length ? `${r.year} 年你寫了 ${r.diary.length} 篇聆聽日記（共 ${r.diaryDays} 天），日記裡最常出現的心情是 ${r.topDiaryMoods.map(moodLabel).join("、")}。` : `${r.year} 年還沒有聆聽日記。寫下一篇，回顧會更完整。`);
+    return { headline, lines };
+  }
+  function renderReview() {
+    const sel = $("#review-year"), years = reviewYears();
+    if (!years.includes(ui.reviewYear)) ui.reviewYear = years[0];
+    fillSelect(sel, years.map((y) => [y, y + " 年"]), false); sel.value = ui.reviewYear;
+    const r = computeReview(ui.reviewYear), body = $("#review-body"), empty = $("#review-empty"), ready = r.favSongs.length >= MIN_FAVS;
+    body.hidden = !ready; empty.hidden = ready;
+    if (!ready) {
+      emptyBox(empty, "Not enough yet", `目前有 ${r.favSongs.length} 首最愛，至少需要 ${MIN_FAVS} 首，才能整理出年度回顧。去收藏牆點幾顆愛心吧。`, "前往收藏牆", () => { location.hash = "#shelf"; });
+      return;
+    }
+    const t = reviewTexts(r);
+    $("#review-headline").textContent = t.headline;
+    $("#review-summary").replaceChildren(...t.lines.map((l) => el("p", { text: l })));
+    $("#review-stats").replaceChildren(statBox(r.favSongs.length, "最愛歌曲 FAVORITES"), statBox(r.genreCount, "收藏的類型 GENRES"), statBox(r.diary.length, `${r.year} 日記 ENTRIES`), statBox(r.diaryDays, "寫日記的天數 DAYS"));
+    bars($("#review-genre"), r.genreRows, Math.max(...r.genreRows.map((x) => x[1])));
+    bars($("#review-artists"), r.artistRows.slice(0, 5), r.artistRows[0][1]);
+    const moodRows = (rows) => rows.map(([v, c]) => [moodText(v), c]);
+    bars($("#review-mood-fav"), moodRows(r.moodFavRows), Math.max(...r.moodFavRows.map((x) => x[1])));
+    $("#review-mood-year").textContent = `${r.year} 年`;
+    bars($("#review-mood-diary"), moodRows(r.moodDiaryRows), Math.max(...r.moodDiaryRows.map((x) => x[1])));
+    const recent = [...r.diary].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)).slice(0, 3), dEmpty = $("#review-diary-empty");
+    $("#review-diary-count").textContent = r.diary.length ? `（最近 ${recent.length} 篇，共 ${r.diary.length} 篇）` : "";
+    $("#review-diary").replaceChildren(...recent.map((d) => buildDiaryItem(d, false)));
+    dEmpty.hidden = recent.length > 0;
+    if (!recent.length) emptyBox(dEmpty, "Blank page", `${r.year} 年還沒有聆聽日記。`, "去寫一篇", () => { location.hash = "#diary"; });
+    drawReviewCard();
+  }
+  function reviewCardData(r) {
+    return { year: r.year, headline: reviewTexts(r).headline, theme: $("#review-theme").value,
+      genreRows: r.genreRows.filter((x) => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 3),
+      artistRows: r.artistRows.slice(0, 3), moodRows: r.moodFavRows, favCount: r.favSongs.length, diaryCount: r.diary.length, diaryDays: r.diaryDays,
+      covers: r.favSongs.slice(0, 4).map((s) => asset(coverOf(s))) };
+  }
+  async function drawReviewCard(notify) {
+    const r = computeReview(ui.reviewYear); if (r.favSongs.length < MIN_FAVS) return null;
+    const res = await Memory.drawReview($("#review-canvas"), reviewCardData(r));
+    if (notify && res.coverFallback) toast("部分封面無法安全繪入圖片，已改用預設圖樣");
+    return res;
+  }
+  async function downloadReview() {
+    const r = computeReview(ui.reviewYear); if (r.favSongs.length < MIN_FAVS) return toast(`至少需要 ${MIN_FAVS} 首最愛才能下載`);
+    await drawReviewCard(true);
+    const ok = await Memory.download($("#review-canvas"), `sound-shelf-review-${r.year}.png`);
+    toast(ok ? "已下載年度回顧" : "下載失敗，請改用右鍵另存圖片");
+  }
+
   /* ---------- Router ---------- */
   function renderCurrent(animate = true) {
     const v = currentView();
-    if (v === "shelf") renderShelf(animate); else if (v === "mood") renderMood(); else if (v === "diary") renderDiary(); else if (v === "stats") renderStats();
+    if (v === "shelf") renderShelf(animate); else if (v === "mood") renderMood(); else if (v === "diary") renderDiary(); else if (v === "stats") renderStats(); else if (v === "review") renderReview();
   }
   const currentView = () => { const h = location.hash.slice(1); return VIEWS.includes(h) ? h : "shelf"; };
   function route() {
@@ -874,6 +1068,9 @@ window.SoundShelfMemory = (function () {
     $("#song-memory").addEventListener("click", () => goMemory(ui.currentId));
     $("#song-del").addEventListener("click", deleteSong);
     $("#btn-download").addEventListener("click", downloadMemory);
+    $("#review-year").addEventListener("change", (e) => { ui.reviewYear = e.target.value; renderReview(); });
+    $("#review-theme").addEventListener("change", () => drawReviewCard());
+    $("#btn-review-download").addEventListener("click", downloadReview);
     $("#memory-song").addEventListener("change", (e) => { const s = songById(e.target.value); if (s) $("#form-memory").elements.mood.value = s.mood; scheduleDraw(); });
     $("#form-memory").addEventListener("input", scheduleDraw);
     $("#form-memory").addEventListener("change", scheduleDraw);

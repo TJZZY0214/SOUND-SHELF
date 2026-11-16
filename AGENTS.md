@@ -8,7 +8,8 @@
 ## 1. Project Overview
 - **名稱**：SOUND SHELF｜音樂收藏書架　**標語**：Your music, your memories.
 - **理念**：收藏喜歡的音樂，也收藏每首歌背後的回憶。
-- **定位**：結合音樂收藏、心情歌單、聆聽日記、回憶卡與個人統計的互動式網站；韓系極簡＋音樂雜誌風格。
+- **定位**：結合音樂收藏、心情歌單、聆聽日記、回憶卡、個人統計與年度回顧的互動式網站；韓系極簡＋音樂雜誌風格。
+- **目前版本**：V2.0（新增「我的音樂年度回顧」）。版本紀錄見 §14。
 - **播放與版權界線（最重要）**：本站只允許兩種播放來源：
   1. **自有音檔**：放在 `assets/audio/` 的**原創／CC0／已取得授權**音檔（目前 12 首為程式合成的原創循環音樂），由 `audio` 欄位指向，用 HTML5 `<audio>` 播放。
   2. **官方內嵌播放器**：使用者貼上的 YouTube 或 Spotify 單曲連結（`listenUrl`），僅以官方 iframe 內嵌播放。
@@ -36,6 +37,7 @@
 | 10 | 個人音樂統計 | `renderStats` |
 | 11 | Light / Dark 主題（持久化） | `setTheme` |
 | 12 | 站內播放：自有音檔 `<audio>`／YouTube、Spotify 官方內嵌 | `renderPlayer`、`toEmbed` |
+| 13 | 我的音樂年度回顧：類型/歌手/心情統計、日記摘要、可下載 PNG、資料不足時的空狀態 | `#view-review`、`computeReview`、`renderReview`、`Memory.drawReview` |
 
 ## 3. Tech Stack
 - 純 **HTML5 / CSS3 / JavaScript（ES2020）**；無框架、無 npm、無打包、無後端、無 API Key。
@@ -52,7 +54,7 @@
 index.html
 ├── <head>             meta、Google Fonts、主題預載 script
 ├── <style>            SECTION: STYLE  — 所有樣式，色彩/間距為 :root 變數
-├── <body> 標記         導覽、5 個 view（shelf/mood/diary/memory/stats）、2 個 <dialog>、toast
+├── <body> 標記         導覽、6 個 view（shelf/mood/diary/memory/stats/review）、2 個 <dialog>、toast
 ├── <script id="sec-data">     SECTION: DATA     預設資料 + 常數（GENRES、MOODS、DEFAULT_SONGS），只放資料
 ├── <script id="sec-storage">  SECTION: STORAGE  使用者資料：讀寫、驗證、版本遷移、錯誤處理（SoundShelfStorage）
 ├── <script id="sec-memory">   SECTION: MEMORY   回憶卡 Canvas 繪製與下載（SoundShelfMemory）
@@ -83,7 +85,8 @@ AGENTS.md  本文件        README.md  給人類看的簡介與部署
 **專輯卡片**：1:1 封面、細邊框、無厚重陰影；結構「封面（右上愛心）→ 類型·心情 → 歌名 → 歌手 · 專輯」。清單檢視為「小封面＋歌名/歌手/專輯＋類型＋愛心」一列。
 **動畫**：僅淡入、上浮、hover 微上移與封面 1.03 倍、view 切換淡入、首頁黑膠緩慢旋轉。時間 .3–.8s。必須保留 `prefers-reduced-motion`。不得新增彈跳、視差、閃爍。
 **RWD**：≤900px（平板：導覽縮小、2 欄）、≤560px（手機：導覽可橫向捲動、1–2 欄）。
-**可用 class（新元件請先沿用）**：`.card` `.row` `.chip` `.btn` `.btn.ghost` `.link-btn` `.badge` `.panel` `.field` `.empty` `.bar` `.stat`。
+**可用 class（新元件請先沿用）**：`.card` `.row` `.chip` `.btn` `.btn.ghost` `.link-btn` `.badge` `.panel` `.field` `.empty` `.bar`（最高值那列加 `.is-top`）`.stat` `.diary-item`。
+**class 命名陷阱**：`.top` 已被頁首（header）使用，**不得**再拿來當狀態 class（V2.0 曾因 `.bar.top` 與頁首撞名而壞版，已改為 `.is-top`）。新增 class 前先搜尋是否已存在。
 
 ## 6. Naming Conventions
 - 檔名 kebab-case（`cover-default.svg`）。HTML/CSS class kebab-case；JS 變數/函式 camelCase，常數 UPPER_SNAKE_CASE。
@@ -118,6 +121,8 @@ AGENTS.md  本文件        README.md  給人類看的簡介與部署
 - **新增 view**：`index.html` 加 `<section id="view-xxx" class="view" hidden>`、導覽連結 `href="#xxx"`，並在 `app.js` 的 `VIEWS` 登記與撰寫 `renderXxx()`。
 - **新增對話框**：原生 `<dialog>`，沿用 `.close`、`[data-close]`、`.btn`；Esc、×、點背景可關閉。
 - **播放器**：只能經由 `renderPlayer()` 建立；`<audio>` 必須有 `controlsList="nodownload"`、`preload="none"`；iframe 必須經 `toEmbed()` 轉換（僅接受 YouTube watch/shorts/youtu.be 與 Spotify track 連結）並保留 `sandbox` 屬性；關閉對話框時必須停止並移除播放器（`stopPlayer`）。
+- **統計誠信（V2.0 新增）**：所有統計與回顧只能使用站內「實際存在」的資料（歌曲、最愛、日記）。**禁止**虛構或估算播放次數、聆聽分鐘/小時、排行名次等站內沒有記錄的數據；摘要文字必須是由真實統計填入的樣板句。資料有並列時要明示「並列」，不得硬選一個。
+- **年度回顧**：最愛清單沒有日期，故類型/歌手/最愛心情統計的是「目前全部最愛」，日記統計依所選年份；頁面與圖片必須註明。至少要有 `MIN_FAVS`（目前 3）首最愛才產生回顧，不足時顯示空狀態與前往收藏牆的按鈕，且不得提供下載。回顧圖由 `SoundShelfMemory.drawReview()` 繪製（1080×1350，與回憶卡同系列色票），日記項目沿用 `buildDiaryItem()`，長條圖沿用 `bars()`。
 - **空狀態**：任何列表都必須有空狀態（`.empty`，含一句友善說明與可行的下一步按鈕）。
 
 ## 9. Data Management Rules
@@ -143,7 +148,8 @@ AGENTS.md  本文件        README.md  給人類看的簡介與部署
 - **新增一首預設歌曲**：§7 最後一點。
 - **新增分類或心情**：§8。
 - **新增功能（例：依歌手排序、匯出日記）**：(1) §2 功能表加一列；(2) 狀態放 `state`，持久化走 `SoundShelfStorage`（若新增儲存欄位 → §9 升版本）；(3) UI 沿用 `.chip/.btn/.panel`；(4) 補空狀態、鍵盤操作與 aria；(5) 跑完 §12。
-- **調整回憶卡樣式**：只改 `memory.js` 的 `draw()`；保持 1080×1350 尺寸與色彩變數對應的色票。
+- **調整回憶卡/回顧圖樣式**：只改 `memory.js` 的 `draw()`／`drawReview()`；保持 1080×1350 尺寸與色彩變數對應的色票。
+- **擴充年度回顧**：新增統計時在 `computeReview()` 加欄位、在 `renderReview()` 用 `bars()`／`statBox()` 顯示、必要時在 `drawReview()` 加入圖片；仍須遵守 §8「統計誠信」。若需要「收藏日期」之類的新資料，必須走 §9 升版本與遷移，不可只存在記憶體。
 - **新增圖片/音檔到 ASSETS 區塊**：用下列 Python 小腳本，把檔案轉成 data URI 並加進 `window.SoundShelfAssets`（鍵名用邏輯路徑）：
   ```python
   import re, json, base64
@@ -160,10 +166,11 @@ AGENTS.md  本文件        README.md  給人類看的簡介與部署
 - **範例指令**：「請依 AGENTS.md，在 Indie 類型新增一首心情為 Chill 的歌曲，並附上封面。」
 
 ## 12. Quality Checklist
-**功能**：卡片/清單切換；搜尋＋類型＋我的最愛可疊加；最愛重新整理後仍在；5 種心情歌單；日記可新增/刪除；新增音樂（含驗證、重複檢查）立即顯示且重整後仍在；隨機推薦；回憶卡可預覽並下載 PNG；預設歌曲可播放/暫停、關閉對話框後停止；貼 YouTube/Spotify 連結會出現內嵌播放器（非這兩者只顯示連結）；統計數字正確；主題與檢視偏好重整後保留。
+**功能**：卡片/清單切換；搜尋＋類型＋我的最愛可疊加；最愛重新整理後仍在；5 種心情歌單；日記可新增/刪除；新增音樂（含驗證、重複檢查）立即顯示且重整後仍在；隨機推薦；回憶卡可預覽並下載 PNG；預設歌曲可播放/暫停、關閉對話框後停止；貼 YouTube/Spotify 連結會出現內嵌播放器（非這兩者只顯示連結）；統計數字正確；**年度回顧**：0–2 首最愛時顯示空狀態（含目前數量與前往收藏牆按鈕）、≥3 首時顯示回顧；類型/歌手/兩種心情統計與實際資料一致（並列要標示）；切換年份後日記統計改變；可下載 PNG（奶油白/炭黑兩種）；頁面與圖片沒有播放次數或聆聽時間；歌名/歌手含 `<b>` 之類字元時只顯示為文字；主題與檢視偏好重整後保留。
 **資料**：手動把 `soundshelf.state` 改成壞掉的 JSON → 網站仍可開啟並出現提示；舊版本資料能遷移。
 **安全**：標題輸入 `<img src=x onerror=alert(1)>` 只會顯示為文字。
-**RWD**：1280 / 820 / 390px 無橫向捲軸、無重疊。
+**RWD**：1280 / 820 / 390px 無橫向捲軸、無重疊（含 6 個導覽項目與年度回顧頁）。
+**視覺**：改動後要實際看過截圖（含深色模式、統計頁與回顧頁），確認沒有 class 撞名造成的錯位。
 **無障礙**：圖片 alt、按鈕名稱、`aria-pressed`/`aria-current`、鍵盤可操作、焦點可見、深淺色對比、`prefers-reduced-motion`。
 **錯誤**：Console 無錯誤；各 `<script>` 區塊語法正確（可用瀏覽器 Console 或把區塊內容貼到 `node --check` 檢查）；**單獨拿 index.html 一個檔案雙擊開啟也要完全正常**（無缺圖、無缺樣式）。
 
@@ -172,3 +179,8 @@ AGENTS.md  本文件        README.md  給人類看的簡介與部署
 2. 推送到 `main`。Settings → Pages → Deploy from a branch → `main` / `(root)`。
 3. 網址 `https://<帳號>.github.io/<repo>/`；檔名區分大小寫；因為是單檔，沒有外部資源路徑問題。
 4. 部署後在線上版重跑 §12；不得提交任何金鑰或個資。
+
+## 14. Version Log 版本紀錄
+- **V1.0**：收藏牆、類型/搜尋、最愛、心情歌單、聆聽日記、新增音樂、隨機推薦、回憶卡、統計、主題。
+- **V1.1**：站內播放（自有原創音檔 + YouTube/Spotify 官方內嵌）；改為單檔 `index.html`。
+- **V2.0**：新增「我的音樂年度回顧」（`#review`）。沿用既有資料結構，**未新增儲存欄位、`STATE_VERSION` 維持 1**；新增 `Memory.drawReview()`、`buildDiaryItem()`（由 `renderDiary` 抽出共用）；修正 `.bar.top` 與頁首 `.top` 的 class 撞名（改為 `.is-top`，同時修好 V1 統計頁的錯位）；新增 §8「統計誠信」規則。
