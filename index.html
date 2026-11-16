@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SOUND SHELF｜音樂收藏書架</title>
+  <meta name="description" content="Your music, your memories. 收藏喜歡的音樂，也收藏每首歌背後的回憶。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script>/* 預載主題，避免閃白（唯一允許直接讀 localStorage 的地方） */
+    try{var s=JSON.parse(localStorage.getItem("soundshelf.state")||"{}");if(s.settings&&s.settings.theme==="dark")document.documentElement.dataset.theme="dark";}catch(e){}
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main">跳到內容</a>
+  <header class="top">
+    <a class="logo" href="#shelf" aria-label="SOUND SHELF 首頁">SOUND<i>·</i>SHELF</a>
+    <nav class="nav" id="nav" aria-label="主要導覽">
+      <a href="#shelf" data-nav="shelf">收藏牆<small>Shelf</small></a>
+      <a href="#mood" data-nav="mood">心情歌單<small>Mood</small></a>
+      <a href="#diary" data-nav="diary">聆聽日記<small>Diary</small></a>
+      <a href="#memory" data-nav="memory">回憶卡<small>Memory</small></a>
+      <a href="#stats" data-nav="stats">統計<small>Stats</small></a>
+    </nav>
+    <button class="icon-btn" id="btn-theme" type="button" aria-label="切換深色／淺色模式" aria-pressed="false">◐</button>
+  </header>
+
+  <main id="main">
+    <!-- 收藏牆 -->
+    <section class="view" id="view-shelf" data-view="shelf" aria-label="音樂收藏牆">
+      <div class="hero">
+        <div class="hero-text">
+          <p class="eyebrow">音樂收藏書架 · Vol. 01</p>
+          <h1>SOUND<br><em>SHELF</em></h1>
+          <p class="tagline">Your music, your memories.</p>
+          <p class="sub">收藏喜歡的音樂，也收藏每首歌背後的回憶。</p>
+          <div class="hero-cta">
+            <button class="btn" id="btn-add" type="button">＋ 新增音樂</button>
+            <button class="btn ghost" id="btn-random" type="button">隨機推薦</button>
+          </div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="vinyl"></div>
+          <img class="sleeve" id="hero-cover" src="assets/images/soft-landing.svg" alt="">
+        </div>
+      </div>
+
+      <div class="toolbar" aria-label="篩選與搜尋">
+        <div class="chips" id="genre-chips" role="group" aria-label="音樂類型"></div>
+        <div class="toolbar-row">
+          <label class="sr-only" for="search">搜尋歌曲、歌手或專輯</label>
+          <input id="search" type="search" placeholder="搜尋歌曲、歌手、專輯…" autocomplete="off">
+          <button class="chip" id="btn-fav-filter" type="button" aria-pressed="false">♡ 我的最愛 <span id="fav-count">0</span></button>
+          <div class="seg" role="group" aria-label="檢視方式">
+            <button type="button" id="btn-view-card" aria-pressed="true">卡片</button>
+            <button type="button" id="btn-view-list" aria-pressed="false">清單</button>
+          </div>
+        </div>
+        <p class="result-info" id="result-info" role="status" aria-live="polite"></p>
+      </div>
+      <div id="songs" class="songs"></div>
+      <div id="shelf-empty" class="empty" hidden></div>
+    </section>
+
+    <!-- 心情歌單 -->
+    <section class="view" id="view-mood" data-view="mood" aria-label="心情歌單" hidden>
+      <header class="view-head"><p class="eyebrow">Mood Playlists</p><h2>心情歌單</h2><p class="sub">今天想要什麼樣的心情？</p></header>
+      <div class="chips" id="mood-chips" role="group" aria-label="心情"></div>
+      <div id="mood-songs" class="songs is-list"></div>
+      <div id="mood-empty" class="empty" hidden></div>
+    </section>
+
+    <!-- 聆聽日記 -->
+    <section class="view" id="view-diary" data-view="diary" aria-label="聆聽日記" hidden>
+      <header class="view-head"><p class="eyebrow">Listening Diary</p><h2>聆聽日記</h2><p class="sub">記下今天，這首歌帶給你的感受。</p></header>
+      <div class="two-col">
+        <form class="panel form" id="form-diary" novalidate>
+          <label class="field">歌曲 <span class="req">*</span><select name="songId" id="diary-song" required></select></label>
+          <label class="field">日期 <span class="req">*</span><input type="date" name="date" required></label>
+          <label class="field">心情 <span class="req">*</span><select name="mood" id="diary-mood" required></select></label>
+          <label class="field">今天的聆聽紀錄 <span class="req">*</span><textarea name="text" rows="5" maxlength="500" required placeholder="這首歌讓你想起了什麼？"></textarea></label>
+          <p class="error" id="diary-error" role="alert"></p>
+          <button class="btn" type="submit">保存日記</button>
+        </form>
+        <div>
+          <h3 class="sec-title">我的日記 <span id="diary-count"></span></h3>
+          <div id="diary-list" class="diary-list"></div>
+          <div id="diary-empty" class="empty small" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 回憶卡 -->
+    <section class="view" id="view-memory" data-view="memory" aria-label="Music Memory 回憶卡" hidden>
+      <header class="view-head"><p class="eyebrow">Music Memory</p><h2>音樂回憶卡</h2><p class="sub">把一首歌與一段回憶，做成一張卡片。</p></header>
+      <div class="two-col memory-grid">
+        <form class="panel form" id="form-memory" novalidate>
+          <label class="field">歌曲 <span class="req">*</span><select name="songId" id="memory-song"></select></label>
+          <label class="field">日期 <span class="req">*</span><input type="date" name="date"></label>
+          <label class="field">心情 <span class="req">*</span><select name="mood" id="memory-mood"></select></label>
+          <label class="field">卡片色調<select name="theme"><option value="light">奶油白</option><option value="dark">炭黑</option></select></label>
+          <label class="field">個人文字 <span class="req">*</span><textarea name="text" rows="4" maxlength="120" placeholder="寫下這首歌的回憶（120 字內）"></textarea></label>
+          <p class="error" id="memory-error" role="alert"></p>
+          <button class="btn" type="button" id="btn-download">下載 PNG</button>
+        </form>
+        <div class="preview"><canvas id="memory-canvas" width="1080" height="1350" aria-label="回憶卡預覽"></canvas></div>
+      </div>
+    </section>
+
+    <!-- 統計 -->
+    <section class="view" id="view-stats" data-view="stats" aria-label="個人音樂統計" hidden>
+      <header class="view-head"><p class="eyebrow">My Music Stats</p><h2>個人音樂統計</h2><p class="sub">看看你的音樂口味。</p></header>
+      <div class="stat-row" id="stat-row"></div>
+      <div class="two-col">
+        <div class="panel"><h3 class="sec-title">最常收藏的類型 <small>依「我的最愛」計算</small></h3><div id="stat-genre"></div></div>
+        <div class="panel"><h3 class="sec-title">各心情的歌曲數 <small>收藏牆全部歌曲</small></h3><div id="stat-mood"></div></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>SOUND SHELF · 預設歌曲為原創合成音樂；外部歌曲透過 YouTube／Spotify 官方播放器播放。</p>
+    <p>資料儲存在你的瀏覽器，不會上傳。預設歌手與歌名皆為虛構。</p>
+  </footer>
+
+  <!-- 歌曲詳細 -->
+  <dialog id="dlg-song" aria-labelledby="song-title">
+    <button class="close" type="button" data-close aria-label="關閉">×</button>
+    <div class="song-dlg">
+      <img id="song-cover" alt="">
+      <div class="song-info">
+        <p class="meta" id="song-meta"></p>
+        <h2 id="song-title"></h2>
+        <p class="song-sub" id="song-sub"></p>
+        <div class="btn-row">
+          <button class="btn" id="song-fav" type="button"></button>
+          <button class="btn ghost" id="song-diary" type="button">寫聆聽日記</button>
+          <button class="btn ghost" id="song-memory" type="button">做回憶卡</button>
+        </div>
+        <div id="song-player" class="player"></div>
+        <p class="note" id="song-note"></p>
+        <p class="ext"><a id="song-listen" target="_blank" rel="noopener noreferrer"></a></p>
+        <button class="link-btn danger" id="song-del" type="button" hidden>從收藏牆刪除這首歌</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- 新增音樂 -->
+  <dialog id="dlg-add" aria-labelledby="add-title">
+    <button class="close" type="button" data-close aria-label="關閉">×</button>
+    <form id="form-song" class="form pad" novalidate>
+      <h2 id="add-title">新增音樂</h2>
+      <label class="field">歌曲名稱 <span class="req">*</span><input name="title" maxlength="60" required></label>
+      <label class="field">歌手 <span class="req">*</span><input name="artist" maxlength="40" required></label>
+      <label class="field">專輯 <span class="req">*</span><input name="album" maxlength="60" placeholder="單曲請填 Single" required></label>
+      <div class="grid2">
+        <label class="field">類型 <span class="req">*</span><select name="genre" id="add-genre" required></select></label>
+        <label class="field">心情 <span class="req">*</span><select name="mood" id="add-mood" required></select></label>
+      </div>
+      <label class="field">封面網址（https://，選填）<input name="cover" type="url" placeholder="留空會使用預設封面"></label>
+      <label class="field">聆聽連結（https://，選填）<input name="listenUrl" type="url" placeholder="貼上 YouTube 或 Spotify 單曲連結，即可在站內播放"></label>
+      <p class="error" id="song-error" role="alert"></p>
+      <div class="btn-row"><button class="btn" type="submit">加入收藏牆</button><button class="btn ghost" type="button" data-close>取消</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="js/data.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/memory.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
