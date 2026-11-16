@@ -12,7 +12,7 @@
 - **播放與版權界線（最重要）**：本站只允許兩種播放來源：
   1. **自有音檔**：放在 `assets/audio/` 的**原創／CC0／已取得授權**音檔（目前 12 首為程式合成的原創循環音樂），由 `audio` 欄位指向，用 HTML5 `<audio>` 播放。
   2. **官方內嵌播放器**：使用者貼上的 YouTube 或 Spotify 單曲連結（`listenUrl`），僅以官方 iframe 內嵌播放。
-  **禁止**：加入未授權的音檔（含擷取、轉檔自串流平台的音檔）、提供音檔下載功能、自行抓取串流網址、嵌入上述兩個平台以外的播放來源、假裝虛構歌曲是真實歌曲。新增任何音檔都必須在 `assets/audio/README.md` 登記來源與授權。
+  **禁止**：加入未授權的音檔（含擷取、轉檔自串流平台的音檔）、提供音檔下載功能、自行抓取串流網址、嵌入上述兩個平台以外的播放來源、假裝虛構歌曲是真實歌曲。新增任何音檔都必須在 §11「音檔授權登記」登記來源與授權。
 - **預設資料**皆為虛構的歌曲與藝人，封面為原創 SVG、音檔為原創合成音樂，避免侵權。
 
 ## 2. Project Goals
@@ -43,25 +43,28 @@
 - 字體：Google Fonts（Cormorant Garamond、Noto Sans TC），有系統字體 fallback。
 - 儲存：`localStorage`，單一鍵 `soundshelf.state`（見 §9）。
 - 回憶卡：原生 Canvas 2D 繪製，`canvas.toBlob` 下載 PNG。
-- **本機執行**：在專案根目錄執行 `python3 -m http.server 8000`，開啟 http://localhost:8000。
-  （請勿用 `file://` 測試回憶卡：瀏覽器會因跨來源限制改用預設封面。）
+- **本機執行**：在 index.html 所在資料夾執行 `python3 -m http.server 8000`，開啟 http://localhost:8000。
+  也可直接雙擊 `index.html` 開啟（所有資源已內嵌，`file://` 下回憶卡與播放都能正常運作）。
 
 ## 4. Project Structure
+**本專案是「單檔」網站：所有 CSS、JavaScript、封面圖、音樂都寫在 `index.html` 一個檔案裡**（讓使用者只拿到一個檔案也能開啟，且部署時沒有路徑問題）。
 ```
-sound-shelf/
-├── index.html        頁面骨架：導覽、5 個 view（shelf/mood/diary/memory/stats）、2 個 <dialog>
-├── AGENTS.md         本文件
-├── README.md         給人類的簡介與部署
-├── css/style.css     唯一樣式檔，所有色彩/間距為 :root 變數
-├── js/
-│   ├── data.js       預設資料 + 常數（GENRES、MOODS、DEFAULT_SONGS）。只放資料，不放邏輯
-│   ├── storage.js    使用者資料：讀寫、驗證、版本遷移、錯誤處理（SoundShelfStorage）
-│   ├── memory.js     回憶卡 Canvas 繪製與下載（SoundShelfMemory）
-│   └── app.js        UI 狀態、渲染、事件、路由（單一 IIFE）
-├── assets/images/    封面 SVG 與 cover-default.svg
-└── assets/audio/     原創合成 mp3 與 README.md（授權登記）
+index.html
+├── <head>             meta、Google Fonts、主題預載 script
+├── <style>            SECTION: STYLE  — 所有樣式，色彩/間距為 :root 變數
+├── <body> 標記         導覽、5 個 view（shelf/mood/diary/memory/stats）、2 個 <dialog>、toast
+├── <script id="sec-data">     SECTION: DATA     預設資料 + 常數（GENRES、MOODS、DEFAULT_SONGS），只放資料
+├── <script id="sec-storage">  SECTION: STORAGE  使用者資料：讀寫、驗證、版本遷移、錯誤處理（SoundShelfStorage）
+├── <script id="sec-memory">   SECTION: MEMORY   回憶卡 Canvas 繪製與下載（SoundShelfMemory）
+├── <script id="sec-app">      SECTION: APP      UI 狀態、渲染、事件、路由（單一 IIFE，於 DOMContentLoaded 初始化）
+└── <script id="sec-assets">   SECTION: ASSETS   自動產生的 base64 圖片與音檔（window.SoundShelfAssets）
+AGENTS.md  本文件        README.md  給人類看的簡介與部署
 ```
-載入順序固定：`data.js → storage.js → memory.js → app.js`。調整說明：依需求拆出 storage.js/memory.js，讓資料與繪圖與 UI 邏輯分離，方便 AI 只改單一模組。
+- 本文件中提到的 `data.js`、`storage.js`、`memory.js`、`app.js`、`style.css`，都是指 `index.html` 裡對應的 SECTION（用檔案內的 `<!-- ==== SECTION: … ==== -->` 註解搜尋）。
+- **資源路徑是「邏輯路徑」**：資料裡寫 `assets/images/x.svg`、`assets/audio/x.mp3`，執行時由 `asset(path)` 在 `SoundShelfAssets` 查出對應的 data URI（找不到才原樣使用，因此 https 網址照常運作）。**不要在 HTML 裡直接寫 `<img src="assets/...">`**，一律用 JS 的 `asset()`。
+- **ASSETS 區塊不得手動編輯**（內容是 base64，極長）。新增圖片/音檔的方法見 §11。
+- 載入順序固定：STYLE → 標記 → DATA → STORAGE → MEMORY → APP → ASSETS；ASSETS 在最後，所以 APP 必須等 `DOMContentLoaded` 才初始化，不得改成立即執行。
+- 為何單檔：作業與部署需求（只交付/上傳一個 `index.html` 即可運作）；代價是檔案較大（約 3MB，主要為音檔），因此音檔需壓縮（單聲道、約 48kbps）。
 
 ## 5. Design System
 **風格**：韓系極簡、音樂雜誌、大量留白、細線、大型英文標題。非後台系統——要有層次（超大標題、封面主視覺、細線分隔、字距）。
@@ -98,7 +101,7 @@ sound-shelf/
   genre: "Indie",             // 只能是 GENRES：K-POP | R&B | Pop | Indie | Others
   mood: "Chill",              // 只能是 MOODS.value：Happy | Chill | Sad | Energy | Love
   cover: "assets/images/x.svg", // 相對路徑或 https 網址；無則用 cover-default.svg
-  audio: "assets/audio/x.mp3", // 選填，自有（原創/CC0/授權）音檔，只能是 assets/audio/ 內相對路徑；預設歌曲專用
+  audio: "assets/audio/x.mp3", // 選填，自有（原創/CC0/授權）音檔，路徑只能是 `assets/audio/…`（邏輯路徑，需在 ASSETS 區塊有對應內容）；預設歌曲專用
   listenUrl: ""               // 選填，https 連結；若為 YouTube/Spotify 單曲連結會在站內內嵌播放，其餘只顯示為外部連結
 }
 ```
@@ -106,7 +109,7 @@ sound-shelf/
 - 使用者新增的歌曲額外含 `source: "user"` 與 `addedAt`（ISO 時間字串），**只存在 localStorage**。預設資料不要有 `source`。
 - **聆聽日記（diary）**：`{ id, songId, songTitle, songArtist, cover, date:"YYYY-MM-DD", mood, text, createdAt }`；`text` 1–500 字。`songTitle/songArtist/cover` 為建立時的快照，歌曲被刪除後日記仍可顯示。
 - 驗證一律走 `SoundShelfStorage.validateSong()`；不得在別處自創驗證規則。要新增欄位時，須同時更新：本節、`data.js`、`storage.js`（驗證與遷移）、新增表單、`renderSongs`、README。
-- 新增預設歌曲：在 `DEFAULT_SONGS` 陣列**最後**新增物件、放封面到 `assets/images/`、id 接續流水號、歌手與歌名須為**虛構或已取得授權**。
+- 新增預設歌曲：在 `DEFAULT_SONGS` 陣列**最後**新增物件、依 §11 把封面加進 ASSETS 區塊、id 接續流水號、歌手與歌名須為**虛構或已取得授權**。
 
 ## 8. Component Rules
 - **新增卡片/清單列**：一律經 `renderSongs()` 內的 `buildCard()` / `buildRow()` 產生，**不手寫卡片 HTML**。
@@ -141,7 +144,19 @@ sound-shelf/
 - **新增分類或心情**：§8。
 - **新增功能（例：依歌手排序、匯出日記）**：(1) §2 功能表加一列；(2) 狀態放 `state`，持久化走 `SoundShelfStorage`（若新增儲存欄位 → §9 升版本）；(3) UI 沿用 `.chip/.btn/.panel`；(4) 補空狀態、鍵盤操作與 aria；(5) 跑完 §12。
 - **調整回憶卡樣式**：只改 `memory.js` 的 `draw()`；保持 1080×1350 尺寸與色彩變數對應的色票。
-- **新增可播放的預設歌曲**：把原創/CC0 mp3 放進 `assets/audio/`（建議 ≤500KB）、在 `assets/audio/README.md` 登記授權、再於資料加上 `audio` 欄位。
+- **新增圖片/音檔到 ASSETS 區塊**：用下列 Python 小腳本，把檔案轉成 data URI 並加進 `window.SoundShelfAssets`（鍵名用邏輯路徑）：
+  ```python
+  import re, json, base64
+  html = open("index.html", encoding="utf-8").read()
+  m = re.search(r'(window\.SoundShelfAssets = )(\{.*?\});\n</script>', html, re.S)
+  assets = json.loads(m.group(2))
+  def add(key, path, mime): assets[key] = f"data:{mime};base64," + base64.b64encode(open(path, "rb").read()).decode()
+  add("assets/audio/new.mp3", "new.mp3", "audio/mpeg")      # 圖片用 "image/svg+xml" 或 "image/png"
+  html = html[:m.start(2)] + json.dumps(assets, separators=(",", ":")) + html[m.end(2):]
+  open("index.html", "w", encoding="utf-8").write(html)
+  ```
+  音檔建議先壓縮：`ffmpeg -i in.mp3 -ac 1 -ar 24000 -b:a 48k out.mp3`（每首 ≤250KB）。音檔必須是原創／CC0／已授權，並在下方「音檔授權登記」補一行。
+- **音檔授權登記**：12 首預設音檔皆為本專案以程式（Python + numpy）合成的原創循環音樂，作者釋出為 CC0；非任何現有歌曲。
 - **範例指令**：「請依 AGENTS.md，在 Indie 類型新增一首心情為 Chill 的歌曲，並附上封面。」
 
 ## 12. Quality Checklist
@@ -150,10 +165,10 @@ sound-shelf/
 **安全**：標題輸入 `<img src=x onerror=alert(1)>` 只會顯示為文字。
 **RWD**：1280 / 820 / 390px 無橫向捲軸、無重疊。
 **無障礙**：圖片 alt、按鈕名稱、`aria-pressed`/`aria-current`、鍵盤可操作、焦點可見、深淺色對比、`prefers-reduced-motion`。
-**錯誤**：Console 無錯誤；`node --check js/*.js` 通過；所有路徑相對。
+**錯誤**：Console 無錯誤；各 `<script>` 區塊語法正確（可用瀏覽器 Console 或把區塊內容貼到 `node --check` 檢查）；**單獨拿 index.html 一個檔案雙擊開啟也要完全正常**（無缺圖、無缺樣式）。
 
 ## 13. GitHub Pages Deployment Rules
-1. 建立 **Public** repo（建議 `sound-shelf`），`index.html` 位於 repo 根目錄。
+1. 建立 **Public** repo（建議 `sound-shelf`），`index.html` 位於 repo 根目錄（本專案只需要 `index.html`、`AGENTS.md`、`README.md`）。
 2. 推送到 `main`。Settings → Pages → Deploy from a branch → `main` / `(root)`。
-3. 網址 `https://<帳號>.github.io/<repo>/`；檔名區分大小寫；所有資源用相對路徑。
+3. 網址 `https://<帳號>.github.io/<repo>/`；檔名區分大小寫；因為是單檔，沒有外部資源路徑問題。
 4. 部署後在線上版重跑 §12；不得提交任何金鑰或個資。
